@@ -1,0 +1,623 @@
+EXP 2-A* ALGORTIHM:
+import heapq
+class Node:
+    def __init__(self,position,parent=None):
+        self.position=position
+        self.parent=parent
+        self.g=0
+        self.h=0
+        self.f=0
+    def __lt__(self,other):
+        return self.f<other.f
+    def heurstic(a,b):
+        return abs(a[0]-b[0])+abs(a[1]-b[1])
+
+def a_star_algorithm(grid,start,goal):
+    open_list=[]
+    closed_list=set()
+    start_node=Node(start)
+    goal_node=Node(goal)
+    heapq.heappush(open_list,start_node)
+    while open_list:
+        current_node=heapq.heappop(open_list)
+        closed_list.add(current_node.position)
+        if current_node.position==goal_node.position:
+            path=[]
+            while current_node:
+                path.append(current_node.position)
+                current_node=current_node.parent
+            return path[::-1]
+        neighbours=[(0,-1),(0,1),(-1,0),(1,0)]
+        for new_position in neighbours:
+            node_position=(current_node.position[0]+new_position[0],
+                           current_node.position[1]+new_position[1])
+            if (node_position[0]<0 or
+                node_position[0]>len(grid)-1 or
+                node_position[1]<0 or
+                node_position[1]>len(grid)-1):
+                continue
+            if grid[node_position[0]][node_position[1]]!=0:
+                continue
+            neighbour=Node(node_position,current_node)
+            if neighbour.position in closed_list:
+                continue
+            neighbour.g=current_node.g+1
+            neighbour.h=Node.heurstic(neighbour.position,goal_node.position)
+            neighbour.f=neighbour.g + neighbour.h
+            if add_to_open(open_list,neighbour):
+                heapq.heappush(open_list,neighbour)
+    return None
+
+def add_to_open(open_list,neighbour):
+    for node in open_list:
+        if neighbour.position==node.position and neighbour.g>node.g:
+            return False
+    return True
+grid=[[0,1,0,0,0,0],
+      [0,0,0,1,1,0],
+      [0,0,0,1,0,0],
+      [0,1,1,0,0,0],
+      [0,1,0,0,0,0],
+      [0,0,1,0,0,0]]
+start=(0,0)  
+goal=(5,5)
+
+path=a_star_algorithm(grid,start,goal)
+print("Path:",path)
+
+------------------------------------------------------------------------------------------------------------------------------------------------------
+
+EXP 3- HEURISTIC SEARCH/ 8 PUZZLE:
+import heapq
+class Puzzle:
+    def __init__(self, start_state, goal_state):
+        self.start_state = start_state
+        self.goal_state = goal_state
+        self.n = 3
+    def manhattan_distance(self, state):
+        distance = 0
+        for i in range(self.n):
+            for j in range(self.n):
+                value = state[self.n * i + j]
+                if value != 0:
+                    goal_i, goal_j = divmod(
+                        self.goal_state.index(value), self.n
+                    )
+                    distance += abs(goal_i - i) + abs(goal_j - j)
+        return distance
+    def get_neighbors(self, state):
+        neighbors = []
+        zero_index = state.index(0)
+        i, j = divmod(zero_index, self.n)
+        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        for di, dj in directions:
+            new_i, new_j = i + di, j + dj
+            if 0 <= new_i < self.n and 0 <= new_j < self.n:
+                new_state = state[:]
+                new_index = new_i * self.n + new_j
+                new_state[zero_index], new_state[new_index] = (
+                    new_state[new_index],
+                    new_state[zero_index],
+                )
+                neighbors.append(new_state)
+        return neighbors
+    def solve(self):
+        start_state = tuple(self.start_state)
+        goal_state = tuple(self.goal_state)
+
+        frontier = []
+        heapq.heappush(
+            frontier,
+            (self.manhattan_distance(start_state), 0, start_state, [])
+        )
+        explored = set()
+        while frontier:
+            _, g, current_state, path = heapq.heappop(frontier)
+
+            if current_state == goal_state:
+                return path
+            explored.add(current_state)
+            for neighbor in self.get_neighbors(list(current_state)):
+                neighbor_tuple = tuple(neighbor)
+                if neighbor_tuple not in explored:
+                    heapq.heappush(
+                        frontier,
+                        (
+                            g + 1 + self.manhattan_distance(neighbor_tuple),
+                            g + 1,
+                            neighbor_tuple,
+                            path + [neighbor_tuple],
+                        )
+                    )
+        return None
+
+start = [1, 2, 3, 0, 4, 6, 7, 5, 8]
+goal = [1, 2, 3, 4, 5, 6, 7, 8, 0]
+puzzle = Puzzle(start, goal)
+solution_path = puzzle.solve()
+if solution_path:
+    print("Solution path:")
+    for step in solution_path:
+        print(step)
+    print("Number of steps:", len(solution_path))
+else:
+    print("No solution found.")
+
+------------------------------------------------------------------------------------------------------------------------------------------------------
+
+EXP 4- CONSTRAINT SATISFACTION PROBLEM:
+def is_consistent(assignment, variable, value, constraints):
+    # Check if assigning value to variable violates any constraint
+    for constraint in constraints:
+        if not constraint(assignment, variable, value):
+            return False
+    return True
+
+def select_unassigned_variable(variables, assignment):
+    # Select the first unassigned variable
+    for variable in variables:
+        if variable not in assignment:
+            return variable
+    return None
+
+def backtrack(assignment, variables, domains, constraints):
+    # If all variables are assigned, return the solution
+    if len(assignment) == len(variables):
+        return assignment
+    # Select an unassigned variable
+    variable = select_unassigned_variable(variables, assignment)
+    # Try each value in the variable's domain
+    for value in domains[variable]:
+        if is_consistent(assignment, variable, value, constraints):
+            # Assign value
+            assignment[variable] = value
+            # Recursive call
+            result = backtrack(assignment, variables, domains, constraints)
+            if result:
+                return result
+            # Backtrack
+            assignment.pop(variable)
+    return None
+
+# Example constraint: All variables must have different values
+def example_constraint(assignment, variable, value):
+    for var, val in assignment.items():
+        if val == value:
+            return False
+    return True
+
+if __name__ == "__main__":
+    # Define variables
+    variables = ['X1', 'X2', 'X3']
+
+    # Define domains
+    domains = {
+        'X1': [1, 2, 3],
+        'X2': [1, 2, 3],
+        'X3': [1, 2, 3]
+    }
+
+    # Define constraints
+    constraints = [example_constraint]
+
+    assignment = {}
+    solution = backtrack(assignment, variables, domains, constraints)
+
+    if solution:
+        print("Solution found:", solution)
+    else:
+        print("No solution exists")
+
+------------------------------------------------------------------------------------------------------------------------------------------------------
+
+EXP 5- GAME SEARCH:
+--> Minimax:
+import math 
+def minimax (curDepth, nodeIndex, maxTurn, scores, targetDepth): 
+    if (curDepth == targetDepth): return scores[nodeIndex] 
+    if (maxTurn): 
+        return max(minimax(curDepth + 1, nodeIndex * 2, False, scores, targetDepth),
+        minimax(curDepth + 1, nodeIndex * 2 + 1, False, scores, targetDepth)) 
+    else: 
+        return min(minimax(curDepth + 1, nodeIndex * 2, True, scores, targetDepth),
+        minimax(curDepth + 1, nodeIndex * 2 + 1, True, scores, targetDepth)) 
+scores = [3, 5, 2, 9, 12, 5, 23, 23] 
+treeDepth = math.log(len(scores), 2) 
+print("The optimal value is : ", end = "") 
+print(minimax(0, 0, True, scores, treeDepth))
+
+--> Alpha-Beta Pruning:
+MAX, MIN = 1000, -1000
+
+def minimax(depth, nodeIndex, maximizingPlayer, values, alpha, beta):
+    if depth == 3:
+        return values[nodeIndex]
+    if maximizingPlayer:
+        best = MIN
+        for i in range(0, 2):
+            val = minimax(depth + 1, nodeIndex * 2 + i, False, values, alpha, beta) 
+            best = max(best, val)
+            alpha = max(alpha, best)
+            if beta <= alpha:
+                break
+        return best            
+    else:
+        best = MAX
+        for i in range(0, 2):
+            val = minimax(depth + 1, nodeIndex * 2 + i, True, values, alpha, beta)
+            best = min(best, val)
+            beta = min(beta, best)
+            if beta <= alpha:
+                break
+        return best
+values = [3, 5, 2, 9, 12, 5, 23, 23]
+print("The optimal value is :", minimax(0, 0, True, values, MIN, MAX))
+
+------------------------------------------------------------------------------------------------------------------------------------------------------
+
+EXP 6- LINEAR REGRESSION:
+--> Gradient Descent:
+import numpy as np
+import pandas as pd
+def gradient_descent(X,y,alpha=0.01,iterations=1000):
+    m,n=X.shape
+    theta=np.zeros(n)
+    cost_history=[]
+    for _ in range(iterations):
+        predictions=X.dot(theta)
+        errors=predictions-y
+        gradient=(1/m)*X.T.dot(errors)
+        theta-=alpha*gradient
+        cost=(1/(2*m))*np.sum(errors**2)
+        cost_history.append(cost)
+    return theta,cost_history
+data=pd.read_csv("data.csv")
+X=data.iloc[:,:-1].values
+y=data.iloc[:,-1].values
+X=np.c_[np.ones(X.shape[0]),X]
+alpha=0.01
+iterations=1000
+theta,cost_history=gradient_descent(X,y,alpha,iterations)
+print("Optimized Weights (theta):")
+print(theta)
+print("\nFinal Cost:")
+print(cost_history[-1])
+print("\nFirst 5 Cost values:")
+print(cost_history[:5])
+
+--> Least Squares:
+import numpy as np
+import pandas as pd
+def least_squares(X,y):
+    return np.linalg.inv(X.T.dot(X)).dot(X.T).dot(y)
+data=pd.read_csv("data.csv")
+X=data.iloc[:,:-1].values
+y=data.iloc[:,-1].values
+X=np.c_[np.ones(X.shape[0]),X]
+theta=least_squares(X,y)
+print("Optimized weights θ:",theta)
+
+--> Polynomial Regression:
+import numpy as np
+import pandas as pd
+from sklearn.preprocessing import PolynomialFeatures
+def polynomial_regression(X,y,degree):
+    poly=PolynomialFeatures(degree)
+    X_poly=poly.fit_transform(X)
+    theta=np.linalg.inv(X_poly.T.dot(X_poly)).dot(X_poly.T).dot(y)
+    return theta
+data=pd.read_csv("data.csv")
+X=data.iloc[:,:-1].values
+y=data.iloc[:,-1].values
+degree=2
+theta=polynomial_regression(X,y,degree)
+print("Optimized weights θ:",theta)
+
+--> Lasso Regression:
+import numpy as np
+import pandas as pd
+from sklearn.linear_model import Lasso
+def lasso_regression(X,y,alpha=1.0):
+    lasso=Lasso(alpha=alpha)
+    lasso.fit(X,y)
+    return lasso.coef_
+data=pd.read_csv("data.csv")
+X=data.iloc[:,:-1].values
+y=data.iloc[:,-1].values
+alpha=0.1
+theta=lasso_regression(X,y,alpha)
+print("Optimized weights θ:",theta)
+
+--> Ridge Regression:
+import numpy as np
+import pandas as pd
+from sklearn.linear_model import Ridge
+def ridge_regression(X,y,alpha=1.0):
+    ridge=Ridge(alpha=alpha)
+    ridge.fit(X,y)
+    return ridge.coef_
+data=pd.read_csv("data.csv")
+X=data.iloc[:,:-1].values
+y=data.iloc[:,-1].values
+alpha=0.5
+theta=ridge_regression(X,y,alpha)
+print("Optimized weights θ:",theta)
+
+------------------------------------------------------------------------------------------------------------------------------------------------------
+
+EXP 7- LOGISTIC REGRESSION:
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, precision_score, recall_score
+
+# Step 1: Load the data
+data = pd.read_csv(r'C:\Users\Student\Desktop\diabetes2.csv')
+
+# Step 2: Inspect columns
+print("Columns in dataset:", data.columns)
+
+# Step 3: Automatically detect target column
+possible_targets = ['target', 'Target', 'Outcome', 'outcome', 'label', 'Label']
+
+target_col = None
+for col in possible_targets:
+    if col in data.columns:
+        target_col = col
+        break
+
+if target_col is None:
+    raise ValueError("No valid target column found. Please check your dataset column names.")
+
+print("Using target column:", target_col)
+
+# Step 4: Separate features and label
+X = data.drop(target_col, axis=1)
+y = data[target_col]
+
+# Step 5: Handle missing values
+X.fillna(X.mean(), inplace=True)
+
+# Step 6: Standardize features
+scaler = StandardScaler()
+X = scaler.fit_transform(X)
+
+# Step 7: Train-test split
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# Step 8: Model training
+model = LogisticRegression()
+model.fit(X_train, y_train)
+
+# Step 9: Prediction
+y_pred = model.predict(X_test)
+
+# Step 10: Evaluation
+accuracy = accuracy_score(y_test, y_pred)
+precision = precision_score(y_test, y_pred)
+recall = recall_score(y_test, y_pred)
+
+# Step 11: Results
+print(f'Accuracy: {accuracy:.2f}')
+print(f'Precision: {precision:.2f}')
+print(f'Recall: {recall:.2f}')
+
+------------------------------------------------------------------------------------------------------------------------------------------------------
+
+EXP 8- NAIVE BAYESIAN CLASSIFIER:
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, precision_score, recall_score
+
+# Step 1: Load the data
+data = pd.read_csv(r'C:\Users\Student\Desktop\diabetes2.csv')
+
+# Step 2: Inspect columns
+print("Columns in dataset:", data.columns)
+
+# Step 3: Automatically detect target column
+possible_targets = ['target', 'Target', 'Outcome', 'outcome', 'label', 'Label']
+
+target_col = None
+for col in possible_targets:
+    if col in data.columns:
+        target_col = col
+        break
+
+if target_col is None:
+    raise ValueError("No valid target column found. Please check your dataset column names.")
+
+print("Using target column:", target_col)
+
+# Step 4: Separate features and label
+X = data.drop(target_col, axis=1)
+y = data[target_col]
+
+# Step 5: Handle missing values
+X.fillna(X.mean(), inplace=True)
+
+# Step 6: Standardize features
+scaler = StandardScaler()
+X = scaler.fit_transform(X)
+
+# Step 7: Train-test split
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# Step 8: Model training
+model = LogisticRegression()
+model.fit(X_train, y_train)
+
+# Step 9: Prediction
+y_pred = model.predict(X_test)
+
+# Step 10: Evaluation
+accuracy = accuracy_score(y_test, y_pred)
+precision = precision_score(y_test, y_pred)
+recall = recall_score(y_test, y_pred)
+
+# Step 11: Results
+print(f'Accuracy: {accuracy:.2f}')
+print(f'Precision: {precision:.2f}')
+print(f'Recall: {recall:.2f}')
+
+------------------------------------------------------------------------------------------------------------------------------------------------------
+
+EXP 9- DECISION TREE CLASSIFIER:
+# Import necessary libraries
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier, BaggingClassifier, AdaBoostClassifier, StackingClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+
+# Load dataset
+data = load_iris()
+X, y = data.data, data.target
+
+# Split the dataset
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, random_state=42
+)
+
+# Initialize models
+dt_model = DecisionTreeClassifier(random_state=42)
+rf_model = RandomForestClassifier(random_state=42)
+
+# FIX: base_estimator → estimator (new versions of sklearn)
+bagging_model = BaggingClassifier(
+    estimator=DecisionTreeClassifier(), random_state=42
+)
+
+boosting_model = AdaBoostClassifier(
+    estimator=DecisionTreeClassifier(), random_state=42
+)
+
+# Stacking model
+estimators = [
+    ('dt', DecisionTreeClassifier(random_state=42)),
+    ('svc', SVC(probability=True, random_state=42))
+]
+
+stacking_model = StackingClassifier(
+    estimators=estimators,
+    final_estimator=LogisticRegression()
+)
+
+# Train models
+dt_model.fit(X_train, y_train)
+rf_model.fit(X_train, y_train)
+bagging_model.fit(X_train, y_train)
+boosting_model.fit(X_train, y_train)
+stacking_model.fit(X_train, y_train)
+
+# Predictions
+dt_pred = dt_model.predict(X_test)
+rf_pred = rf_model.predict(X_test)
+bagging_pred = bagging_model.predict(X_test)
+boosting_pred = boosting_model.predict(X_test)
+stacking_pred = stacking_model.predict(X_test)
+
+# FIX: Proper indentation + string formatting
+def evaluate_model(y_test, y_pred, model_name):
+    accuracy = accuracy_score(y_test, y_pred)
+    precision = precision_score(y_test, y_pred, average='macro')
+    recall = recall_score(y_test, y_pred, average='macro')
+    f1 = f1_score(y_test, y_pred, average='macro')
+    
+    print(f"{model_name} - Accuracy: {accuracy:.4f}, "
+          f"Precision: {precision:.4f}, "
+          f"Recall: {recall:.4f}, "
+          f"F1 Score: {f1:.4f}")
+
+# Evaluate models
+evaluate_model(y_test, dt_pred, "Decision Tree")
+evaluate_model(y_test, rf_pred, "Random Forest")
+evaluate_model(y_test, bagging_pred, "Bagging")
+evaluate_model(y_test, boosting_pred, "Boosting")
+evaluate_model(y_test, stacking_pred, "Stacking")
+
+------------------------------------------------------------------------------------------------------------------------------------------------------
+
+EXP 10- SUPPORT VECTOR MACHINES:
+import matplotlib.pyplot as plt
+from sklearn import datasets
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.svm import SVC
+from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
+# Load the MNIST (digits) dataset
+digits = datasets.load_digits()
+# Flatten the images (8x8) into 64 features
+X = digits.images.reshape((len(digits.images), -1))
+y = digits.target
+# Split into training and testing data
+X_train, X_test, y_train, y_test = train_test_split(
+X, y, test_size=0.3, random_state=4)
+# Feature scaling
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+# Initialize SVM model (RBF kernel)
+model = SVC(kernel='rbf', gamma=0.001, C=100.0)
+model.fit(X_train, y_train)
+# Predictions
+y_pred = model.predict(X_test)
+# Evaluation
+print("Accuracy:", accuracy_score(y_test, y_pred))
+print("\nClassification Report:\n", classification_report(y_test, y_pred))
+print("\nConfusion Matrix:\n", confusion_matrix(y_test, y_pred))
+# Plot some test images with predictions
+plt.figure(figsize=(10, 4))
+for index, (image, prediction) in enumerate(zip(X_test[:5], y_pred[:5])):
+plt.subplot(1, 5, index + 1)
+plt.imshow(image.reshape(8, 8), cmap=plt.cm.gray)
+plt.title(f'Predicted: {prediction}')
+plt.axis('off')
+plt.show()
+
+------------------------------------------------------------------------------------------------------------------------------------------------------
+
+EXP 11- CLUSTERING ALGORITHMS:
+import numpy as np 
+import matplotlib.pyplot as plt 
+from sklearn.datasets import make_blobs, make_moons 
+from sklearn.cluster import KMeans, AgglomerativeClustering, DBSCAN 
+from sklearn.preprocessing import StandardScaler 
+blobs, _ = make_blobs(n_samples=300, centers=4, random_state=42) 
+moons, _ = make_moons(n_samples=300, noise=0.05, random_state=42) 
+scaler = StandardScaler() 
+blobs = scaler.fit_transform(blobs) 
+moons = scaler.fit_transform(moons) 
+kmeans_blobs = KMeans(n_clusters=4, random_state=42) 
+kmeans_moons = KMeans(n_clusters=4, random_state=42) 
+agglo_blobs = AgglomerativeClustering(n_clusters=4) 
+agglo_moons = AgglomerativeClustering(n_clusters=4) 
+dbscan_blobs = DBSCAN(eps=0.3, min_samples=5) 
+dbscan_moons = DBSCAN(eps=0.2, min_samples=5)  # adjusted for moons kmeans_labels_blobs = kmeans_blobs.fit_predict(blobs) 
+agglo_labels_blobs = agglo_blobs.fit_predict(blobs) 
+dbscan_labels_blobs = dbscan_blobs.fit_predict(blobs) 
+kmeans_labels_moons = kmeans_moons.fit_predict(moons) 
+agglo_labels_moons = agglo_moons.fit_predict(moons) 
+dbscan_labels_moons = dbscan_moons.fit_predict(moons) 
+fig, ax = plt.subplots(3, 2, figsize=(12, 12))
+ax[0, 0].scatter(blobs[:, 0], blobs[:, 1], c=kmeans_labels_blobs, cmap='viridis') 
+ax[0, 0].set_title('K-Means (Blobs)') 
+ax[1, 0].scatter(blobs[:, 0], blobs[:, 1], c=agglo_labels_blobs, cmap='viridis') 
+ax[1, 0].set_title('Agglomerative Clustering (Blobs)') 
+ax[2, 0].scatter(blobs[:, 0], blobs[:, 1], c=dbscan_labels_blobs, cmap='viridis') 
+ax[2, 0].set_title('DBSCAN (Blobs)') 
+ax[0, 1].scatter(moons[:, 0], moons[:, 1], c=kmeans_labels_moons, cmap='viridis') 
+ax[0, 1].set_title('K-Means (Moons)') 
+ax[1, 1].scatter(moons[:, 0], moons[:, 1], c=agglo_labels_moons, cmap='viridis') 
+ax[1, 1].set_title('Agglomerative Clustering (Moons)') 
+ax[2, 1].scatter(moons[:, 0], moons[:, 1], c=dbscan_labels_moons, cmap='viridis') 
+ax[2, 1].set_title('DBSCAN (Moons)') plt.tight_layout() plt.show() 
